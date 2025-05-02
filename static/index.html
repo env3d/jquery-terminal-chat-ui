@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Terminal</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/2.44.1/css/jquery.terminal.min.css"
+        rel="stylesheet" />
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            background: black;
+            color: #00ffcc;
+            font-family: monospace;
+        }
+
+        .terminal {
+            height: 100%;
+            --size: 2;
+        }
+
+        .terminal-mobile {
+            --size: 4
+        }
+
+        .chat-bubble {
+            display: inline-block;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .assistant-bubble {
+            background-color: #333;
+            color: #00ffcc;
+            align-self: flex-start;
+    </style>
+</head>
+
+<body>
+
+    <div id="terminal"></div>
+    <script src="https://cdn.jsdelivr.net/npm/jquery"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/2.44.1/js/jquery.terminal.min.js"></script>
+
+    <script>
+        let apiKey = null;
+        let history = [];
+
+        const systemPrompt = "You are a helpful assistant. Answer the user's questions as accurately as possible.";
+
+        var terminal = $('#terminal').terminal(async function (command, term) {
+            if (!apiKey) {
+                term.echo('please provide your OpenAI API key first.');
+                return;
+            }
+
+            if (command.trim() === '') return;
+
+            term.pause();
+
+            // Append user message to history
+            history.push({ role: "user", content: command });
+
+            const messages = [
+                { role: "system", content: systemPrompt },
+                ...history
+            ];
+
+            // api_location = "https://api.openai.com/v1/chat/completions";
+            api_location = "/v1/chat/completions";
+            try {
+                const response = await fetch(api_location, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        // model: "gpt-4.1-mini",
+                        model: "Qwen2-0.5B-Instruct",
+                        messages: messages
+                    })
+                });
+
+                const data = await response.json();
+
+                const reply = data.choices?.[0]?.message?.content || "[No response]";
+                history.push({ role: "assistant", content: reply });
+                term.echo(`<div class="assistant-bubble chat-bubble">${reply}</div>`, { raw: true });
+            } catch (err) {
+                term.error("Error: " + err.message);
+            }
+
+            term.resume();
+        }, {
+            greetings: "OpenAI Terminal Chat\nEnter your OpenAI API key to begin.",
+            name: "chat",
+            prompt: ">>> ",
+            onInit: function (term) {
+                term.push(function (key) {
+                    apiKey = key.trim();
+                    term.echo("API key accepted. Start chatting!");
+                    term.pop();
+                }, {
+                    prompt: "Enter your OpenAI API key: "
+                });
+            }
+        });
+    </script>
+
+</body>
+
+</html>
