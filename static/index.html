@@ -48,17 +48,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/2.44.1/js/jquery.terminal.min.js"></script>
 
     <script>
+        // apiKey should be managed and not hardcoded here.  Maybe add a prompt to enter it.
         let apiKey = null;
         let history = [];
 
         const systemPrompt = "You are a helpful assistant. Answer the user's questions as accurately as possible.";
 
         var terminal = $('#terminal').terminal(async function (command, term) {
-            if (!apiKey) {
-                term.echo('please provide your OpenAI API key first.');
-                return;
-            }
-
             if (command.trim() === '') return;
 
             term.pause();
@@ -98,18 +94,9 @@
 
             term.resume();
         }, {
-            greetings: "OpenAI Terminal Chat\nEnter your OpenAI API key to begin.",
+            greetings: "Web Terminal Chat App",
             name: "chat",
-            prompt: ">>> ",
-            onInit: function (term) {
-                term.push(function (key) {
-                    apiKey = key.trim();
-                    term.echo("API key accepted. Start chatting!");
-                    term.pop();
-                }, {
-                    prompt: "Enter your OpenAI API key: "
-                });
-            }
+            prompt: ">>> "
         });
     </script>
 
