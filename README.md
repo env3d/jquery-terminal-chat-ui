@@ -34,11 +34,32 @@ sudo service nginx start
 
 ```bash
 
+# For dev
 pip install 'llama-cpp-python[server]'
+
 wget https://huggingface.co/NousResearch/DeepHermes-3-Llama-3-3B-Preview-GGUF/resolve/main/DeepHermes-3-Llama-3-3B-Preview-q4.gguf
 
 python3 -m llama_cpp.server --host 0.0.0.0 --port 8080 --model ./DeepHermes-3-Llama-3-3B-Preview-q4.gguf 
 
+# Run image generator
+uvicorn image_gen:app
+
+```
+
+
+```bash
+# For production
+
+python -m venv .env
+source .env/bin/activate
+pip install 'llama-cpp-python[server]'
+pip install torch diffusers transformers accelerate protobuf sentencepiece fastapi uvicorn
+
+CMAKE_ARGS="-DGGML_CUDA=on" FORCE_CMAKE=1 pip install 'llama-cpp-python[server]'
+python3 -m llama_cpp.server --host 0.0.0.0 --port 8080 --model ./DeepHermes-3-Llama-3-3B-Preview-q4.gguf --n_gpu_layers 999
+
+# Run image generator
+PROD=true uvicorn image_gen:app
 ```
 
 # Old Backend Setup

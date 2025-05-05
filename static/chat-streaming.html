@@ -68,11 +68,23 @@
 
                         if (data_str === "[DONE]") continue;
 
-                        const json = JSON.parse(data_str);                        
+                        const json = JSON.parse(data_str);
                         yield json.choices?.[0]?.delta?.content || "";
                     }
                 }
             }
+        }
+
+        // Poll the image URL until it returns a 200 status code
+        async function pollImage(url, interval = 2000, maxAttempts = 10) {
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const response = await fetch(url);
+                if (response.ok) {
+                    return url; // Return the URL if the status is 200
+                }
+                await new Promise(resolve => setTimeout(resolve, interval)); // Wait before retrying
+            }
+            throw new Error("Image generation timed out or failed.");
         }
 
         let apiKey = null;
@@ -128,6 +140,16 @@
                 for await (const token of streamChunks(reader)) {
                     reply += token;
                     bubbleElement.innerHTML = reply;
+                }
+
+                // Send response to /image-gen/add-job?prompt=... to generate an image
+                const imageResponse = await fetch(`/image-gen/add-job?prompt=${reply}`);
+                const imageResponseJson = await imageResponse.json();
+                try {
+                    const imageUrl = await pollImage(imageResponseJson.image);
+                    bubbleElement.innerHTML += `<br><img src="${imageUrl}" alt="Generated Image" style="max-width: 100%; height: auto;">`;
+                } catch (err) {
+                    term.error("Error fetching image: " + err.message);
                 }
 
                 // Add the full reply to the history
