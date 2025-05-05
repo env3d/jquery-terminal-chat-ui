@@ -47,10 +47,38 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/2.44.1/js/jquery.terminal.min.js"></script>
     <script>
+
+        async function* streamChunks(reader) {
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                console.log(buffer)
+                const lines = buffer.split("\n");
+                buffer = lines.pop(); // carry over partial line
+
+                for (let line of lines) {
+                    line = line.trim();
+                    if (line.startsWith("data: ")) {
+                        const data_str = line.slice(6);
+
+                        if (data_str === "[DONE]") continue;
+
+                        const json = JSON.parse(data_str);                        
+                        yield json.choices?.[0]?.delta?.content || "";
+                    }
+                }
+            }
+        }
+
         let apiKey = null;
         let history = [];
 
-        const systemPrompt = "You are she ra and the princesses of power. You are a powerful warrior and leader, and you are here to help me with my tasks. Please answer my questions in a helpful and informative manner.";
+        const systemPrompt = "";
 
         var terminal = $('#terminal').terminal(async function (command, term) {
             if (command.trim() === '') return;
@@ -90,44 +118,17 @@
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder("utf-8");
                 let reply = "";
+
                 // Create a placeholder bubble for the assistant's response
                 let bubbleId = `bubble-${Date.now()}`;
                 term.echo(`<div id="${bubbleId}" class="assistant-bubble chat-bubble"></div>`, { raw: true });
-
                 const bubbleElement = document.getElementById(bubbleId);
 
-                buffer = "";
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    // Decode chunk and append to buffer
-                    buffer += decoder.decode(value, { stream: true });
-
-                    // Process complete lines
-                    let lines = buffer.split("\n");
-
-                    // Save last partial line (if any) to buffer for next round
-                    buffer = lines.pop();
-
-                    for (let line of lines) {
-                        line = line.trim();
-                        if (line.startsWith("data: ")) {
-                            const jsonString = line.slice(6);
-                            if (jsonString === "[DONE]") continue;
-
-                            try {
-                                const parsed = JSON.parse(jsonString);
-                                const token = parsed.choices?.[0]?.delta?.content || "";
-                                reply += token;
-                                bubbleElement.innerHTML = reply;
-                            } catch (err) {
-                                console.warn("Could not parse line:", line);
-                            }
-                        }
-                    }
+                // Stream response
+                for await (const token of streamChunks(reader)) {
+                    reply += token;
+                    bubbleElement.innerHTML = reply;
                 }
-
 
                 // Add the full reply to the history
                 history.push({ role: "assistant", content: reply });
