@@ -56,7 +56,7 @@ pip install torch diffusers transformers accelerate protobuf sentencepiece fasta
 
 CMAKE_ARGS="-DGGML_CUDA=on" FORCE_CMAKE=1 pip install 'llama-cpp-python[server]'
 wget -P /opt/dlami/nvme https://huggingface.co/NousResearch/DeepHermes-3-Mistral-24B-Preview-GGUF/resolve/main/DeepHermes-3-Mistral-24B-Preview-q8.gguf
-python3 -m llama_cpp.server --host 0.0.0.0 --port 8080 --model ./DeepHermes-3-Llama-3-3B-Preview-q4.gguf --n_gpu_layers 999
+python3 -m llama_cpp.server --host 0.0.0.0 --port 8080 --model /opt/dlami/nvme/DeepHermes-3-Mistral-24B-Preview-q8.gguf --n_gpu_layers 999
 
 export HF_TOKEN=<< HF_TOKEN >>
 export HF_HOME=/opt/dlami/nvme/hf
